@@ -1,4 +1,4 @@
-import type { Column, ColumnDef } from "@tanstack/react-table";
+import type { Column, ColumnDef, Row } from "@tanstack/table-core";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
 import { RatingStars } from "@/components/rating-stars";
@@ -9,6 +9,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { genrePillClassName } from "@/lib/genre-pill-palette";
 import { cn } from "@/lib/utils";
 import type { BookTableRow } from "@/types/site-data";
 
@@ -51,6 +52,18 @@ function nullsLastSort(
   if (a == null) return 1;
   if (b == null) return -1;
   return a - b;
+}
+
+/** `filterValue` is a list of genre labels; row matches if it has any of them. */
+export function genreTableFilterFn(
+  row: Row<BookTableRow>,
+  _columnId: string,
+  filterValue: unknown,
+): boolean {
+  const selected = filterValue as string[] | undefined;
+  if (!selected?.length) return true;
+  const bookGenres = row.original.genres ?? [];
+  return selected.some((g) => bookGenres.includes(g));
 }
 
 export const booksColumns: ColumnDef<BookTableRow>[] = [
@@ -211,12 +224,16 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
   {
     accessorKey: "ratingsCount",
     meta: {
-      thClassName: "min-w-[12rem]",
+      thClassName: "min-w-[12rem] whitespace-normal",
       tdClassName: "min-w-[12rem] align-middle",
     },
     header: ({ column }) => (
-      <div className="flex justify-end">
-        <DataTableColumnHeader column={column} title="Ratings" />
+      <div className="flex min-w-0 justify-end">
+        <DataTableColumnHeader
+          column={column}
+          title="Ratings"
+          className="max-w-full min-w-0 shrink whitespace-normal"
+        />
       </div>
     ),
     sortingFn: (rowA, rowB) =>
@@ -235,9 +252,17 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
   },
   {
     accessorKey: "publishedYear",
+    meta: {
+      thClassName: "w-[9rem] min-w-[9rem] max-w-[9rem] whitespace-normal",
+      tdClassName: "w-[9rem] min-w-[9rem] max-w-[9rem] align-middle",
+    },
     header: ({ column }) => (
-      <div className="flex justify-end">
-        <DataTableColumnHeader column={column} title="Published" />
+      <div className="flex min-w-0 justify-end">
+        <DataTableColumnHeader
+          column={column}
+          title="Published"
+          className="max-w-full min-w-0 shrink whitespace-normal"
+        />
       </div>
     ),
     sortingFn: (rowA, rowB) =>
@@ -245,7 +270,7 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
     cell: ({ row }) => {
       const v = row.original.publishedYear;
       return (
-        <div className="text-right tabular-nums">
+        <div className="text-right text-sm tabular-nums leading-none">
           {v != null ? v : "—"}
         </div>
       );
@@ -255,7 +280,7 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
     accessorKey: "pageCount",
     meta: {
       thClassName: "w-20 min-w-20 max-w-20",
-      tdClassName: "w-20 min-w-20 max-w-20 align-top",
+      tdClassName: "w-20 min-w-20 max-w-20 align-middle",
     },
     header: ({ column }) => (
       <div className="flex justify-end">
@@ -267,7 +292,7 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
     cell: ({ row }) => {
       const v = row.original.pageCount;
       return (
-        <div className="text-right tabular-nums text-sm">
+        <div className="text-right text-sm tabular-nums leading-none">
           {v != null ? v : "—"}
         </div>
       );
@@ -276,50 +301,35 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
   {
     id: "genres",
     accessorFn: (row) => (row.genres ?? []).join(", "),
+    filterFn: genreTableFilterFn,
     meta: {
-      thClassName: "min-w-0 max-w-[10rem]",
-      tdClassName:
-        "min-w-0 max-w-[10rem] whitespace-normal break-words align-top",
+      thClassName: "min-w-0 w-[13rem] max-w-[13rem]",
+      tdClassName: "min-w-0 w-[13rem] max-w-[13rem] align-top",
     },
-    header: () => <div className="text-left text-sm font-medium">Genres</div>,
+    header: () => (
+      <div className="text-left text-sm font-medium">Top Genres</div>
+    ),
     enableSorting: false,
     cell: ({ row }) => {
       const genres = row.original.genres ?? [];
       if (!genres.length) {
         return <span className="text-muted-foreground text-sm">—</span>;
       }
-      const joined = genres.join(" · ");
       return (
-        <Tooltip>
-          <TooltipTrigger
-            render={(props) => (
-              <span
-                {...props}
-                className={cn(
-                  "block w-full min-w-0 max-w-full cursor-default text-left",
-                  props.className,
-                )}
-              >
-                <span className="text-muted-foreground block min-w-0 max-w-full truncate text-sm">
-                  {joined}
-                </span>
-              </span>
-            )}
-          />
-          <TooltipContent
-            side="bottom"
-            align="start"
-            sideOffset={8}
-            collisionPadding={16}
-            className={cn(
-              "!block !max-w-[min(20rem,calc(100vw-1.5rem))] !min-w-0",
-              "!px-3 !py-2 !text-left !text-xs !leading-snug",
-              "[&>svg]:hidden",
-            )}
-          >
-            {joined}
-          </TooltipContent>
-        </Tooltip>
+        <div className="flex flex-wrap gap-1.5">
+          {genres.map((label, i) => (
+            <span
+              key={`${i}:${label}`}
+              className={cn(
+                "inline-flex max-w-full items-center rounded-full border px-2 py-0.5",
+                "text-left text-[11px] font-medium leading-tight",
+                genrePillClassName(label),
+              )}
+            >
+              <span className="min-w-0 truncate">{label}</span>
+            </span>
+          ))}
+        </div>
       );
     },
   },

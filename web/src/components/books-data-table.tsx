@@ -9,9 +9,10 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { booksColumns } from "@/components/books-columns";
+import { GenreFilterPopover } from "@/components/genre-filter-popover";
 import { bookDedupeKey } from "@/lib/merge-books";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,6 +39,16 @@ export function BooksDataTable({ data, toolbarStart }: BooksDataTableProps) {
   ]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
+  const genreOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const row of data) {
+      for (const g of row.genres ?? []) {
+        if (g.trim()) s.add(g);
+      }
+    }
+    return [...s].sort((a, b) => a.localeCompare(b));
+  }, [data]);
+
   const table = useReactTable({
     data,
     columns: booksColumns,
@@ -57,6 +68,10 @@ export function BooksDataTable({ data, toolbarStart }: BooksDataTableProps) {
     },
   });
 
+  useEffect(() => {
+    table.setPageIndex(0);
+  }, [columnFilters, table]);
+
   return (
     <div className="w-full min-w-0 space-y-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -69,14 +84,15 @@ export function BooksDataTable({ data, toolbarStart }: BooksDataTableProps) {
           }
           className="h-8 w-[11rem] max-w-full shrink-0 text-[13px]"
         />
+        <GenreFilterPopover table={table} genreOptions={genreOptions} />
         <p className="text-muted-foreground shrink-0 text-sm">
           {table.getFilteredRowModel().rows.length} books · Page{" "}
           {table.getState().pagination.pageIndex + 1} of{" "}
           {table.getPageCount() || 1}
         </p>
       </div>
-      <div className="overflow-hidden rounded-md border">
-        <Table className="table-fixed">
+      <div className="min-w-0 overflow-x-auto rounded-md border">
+        <Table className="w-max min-w-full table-auto">
           <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow

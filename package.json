@@ -1,0 +1,19 @@
+{
+  "name": "goodreads-news",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scrape": "tsx scripts/build.ts",
+    "build:web": "npm run build --prefix web",
+    "build": "npm run scrape && npm run build:web",
+    "dev": "npm run dev --prefix web",
+    "deploy:netlify": "npx netlify-cli deploy --prod"
+  },
+  "devDependencies": {
+    "@types/node": "^22.14.0",
+    "cheerio": "^1.0.0",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

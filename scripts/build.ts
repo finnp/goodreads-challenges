@@ -21,6 +21,11 @@ const TOOLTIP_BATCH = Math.max(
   1,
   Number.parseInt(process.env.GOODREADS_TOOLTIP_BATCH ?? "28", 10) || 28,
 );
+/** Parallel fetches for per-book `/book/show/…` detail pages (page count + genres). */
+const BOOK_PAGE_CONCURRENCY = Math.max(
+  1,
+  Number.parseInt(process.env.GOODREADS_BOOK_PAGE_CONCURRENCY ?? "12", 10) || 12,
+);
 const FETCH_TIMEOUT_MS = 45_000;
 const TOOLTIPS_TIMEOUT_MS = 120_000;
 
@@ -34,6 +39,8 @@ export type BookRow = {
   avgRating: number | null;
   ratingsCount: number | null;
   publishedYear: number | null;
+  pageCount: number | null;
+  genres: string[];
   description: string;
 };
 
@@ -221,8 +228,106 @@ function parseTooltipFragment(html: string): BookRow {
     avgRating,
     ratingsCount,
     publishedYear,
+    pageCount: null,
+    genres: [],
     description: desc,
   };
+}
+
+const TOP_GENRE_COUNT = 3;
+
+type BookPageMeta = { pageCount: number | null; genres: string[] };
+
+/** Parse `/book/show/…` HTML: `numberOfPages` in embedded JSON, genres from the metadata list. */
+function parseBookDetailHtml(html: string): BookPageMeta {
+  let pageCount: number | null = null;
+  const np = html.match(/"numberOfPages"\s*:\s*(\d+)/);
+  if (np) pageCount = Number.parseInt(np[1], 10);
+
+  const $ = cheerio.load(html);
+  if (pageCount == null) {
+    const pf = $('[data-testid="pagesFormat"]').first().text();
+    const m = pf.match(/(\d+)\s*pages?\b/i);
+    if (m) pageCount = Number.parseInt(m[1], 10);
+  }
+
+  const genres: string[] = [];
+  $(
+    '[data-testid="genresList"] .BookPageMetadataSection__genreButton .Button__labelItem',
+  ).each((_, el) => {
+    if (genres.length >= TOP_GENRE_COUNT) return false;
+    const t = $(el).text().trim();
+    if (!t || /^\.{3}\s*more$/i.test(t)) return;
+    genres.push(t);
+    return undefined;
+  });
+
+  return { pageCount, genres };
+}
+
+function uniqueBookUrlsFromPosts(posts: BlogPostData[]): string[] {
+  const seen = new Set<string>();
+  for (const p of posts) {
+    for (const b of p.books) {
+      const u = b.bookUrl.trim();
+      if (u) seen.add(u);
+    }
+  }
+  return [...seen];
+}
+
+async function fetchBookDetailsByUrl(
+  urls: readonly string[],
+): Promise<Map<string, BookPageMeta>> {
+  const map = new Map<string, BookPageMeta>();
+  const n = urls.length;
+  if (n === 0) return map;
+
+  const conc = Math.min(BOOK_PAGE_CONCURRENCY, n);
+  let next = 0;
+  let finished = 0;
+
+  const worker = async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= n) break;
+      const url = urls[i]!;
+      try {
+        const html = await fetchText(url);
+        map.set(url, parseBookDetailHtml(html));
+      } catch (e) {
+        log(
+          `book detail ${i + 1}/${n} failed: ${truncate(url, 56)} — ${String(e)}`,
+        );
+        map.set(url, { pageCount: null, genres: [] });
+      }
+      finished++;
+      if (finished % 40 === 0 || finished === n) {
+        log(`book detail pages ${finished}/${n}`);
+      }
+      await sleep(40);
+    }
+  };
+
+  log(
+    `fetching ${n} book detail page(s) (${conc} concurrent) for page count + top ${TOP_GENRE_COUNT} genres…`,
+  );
+  await Promise.all(Array.from({ length: conc }, () => worker()));
+  return map;
+}
+
+function applyBookDetails(
+  posts: BlogPostData[],
+  details: Map<string, BookPageMeta>,
+): void {
+  for (const p of posts) {
+    for (const b of p.books) {
+      const u = b.bookUrl.trim();
+      const meta = u ? details.get(u) : undefined;
+      b.pageCount = meta?.pageCount ?? null;
+      b.genres = meta?.genres?.length ? [...meta.genres] : [];
+    }
+  }
 }
 
 type BatchProgress = {
@@ -314,6 +419,10 @@ export async function build(): Promise<SiteData> {
     posts.push({ url, title, pickerLabel: label, books });
     await sleep(500);
   }
+
+  const detailUrls = uniqueBookUrlsFromPosts(posts);
+  const details = await fetchBookDetailsByUrl(detailUrls);
+  applyBookDetails(posts, details);
 
   return {
     scrapedAt: new Date().toISOString(),

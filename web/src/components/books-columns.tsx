@@ -252,20 +252,43 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
     },
   },
   {
-    accessorKey: "description",
+    accessorKey: "pageCount",
     meta: {
-      thClassName: "min-w-0 max-w-[min(28vw,20rem)]",
-      tdClassName:
-        "min-w-0 max-w-[min(28vw,20rem)] overflow-hidden align-top",
+      thClassName: "w-20 min-w-20 max-w-20",
+      tdClassName: "w-20 min-w-20 max-w-20 align-top",
     },
     header: ({ column }) => (
-      <DataTableColumnHeader column={column} title="Description" />
+      <div className="flex justify-end">
+        <DataTableColumnHeader column={column} title="Pages" />
+      </div>
     ),
+    sortingFn: (rowA, rowB) =>
+      nullsLastSort(rowA.original.pageCount, rowB.original.pageCount),
     cell: ({ row }) => {
-      const text = (row.getValue("description") as string) ?? "";
-      if (!text.trim()) {
-        return <p className="text-muted-foreground text-sm">—</p>;
+      const v = row.original.pageCount;
+      return (
+        <div className="text-right tabular-nums text-sm">
+          {v != null ? v : "—"}
+        </div>
+      );
+    },
+  },
+  {
+    id: "genres",
+    accessorFn: (row) => (row.genres ?? []).join(", "),
+    meta: {
+      thClassName: "min-w-0 max-w-[10rem]",
+      tdClassName:
+        "min-w-0 max-w-[10rem] whitespace-normal break-words align-top",
+    },
+    header: () => <div className="text-left text-sm font-medium">Genres</div>,
+    enableSorting: false,
+    cell: ({ row }) => {
+      const genres = row.original.genres ?? [];
+      if (!genres.length) {
+        return <span className="text-muted-foreground text-sm">—</span>;
       }
+      const joined = genres.join(" · ");
       return (
         <Tooltip>
           <TooltipTrigger
@@ -278,7 +301,7 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
                 )}
               >
                 <span className="text-muted-foreground block min-w-0 max-w-full truncate text-sm">
-                  {text}
+                  {joined}
                 </span>
               </span>
             )}
@@ -289,14 +312,12 @@ export const booksColumns: ColumnDef<BookTableRow>[] = [
             sideOffset={8}
             collisionPadding={16}
             className={cn(
-              "!block !w-auto !max-w-[min(28rem,calc(100vw-1.5rem))] !min-w-0",
-              "!px-3 !py-2 !text-left !text-sm !leading-snug !whitespace-normal",
-              "max-h-[min(70vh,24rem)] overflow-x-hidden overflow-y-auto",
-              "break-words [word-break:break-word]",
+              "!block !max-w-[min(20rem,calc(100vw-1.5rem))] !min-w-0",
+              "!px-3 !py-2 !text-left !text-xs !leading-snug",
               "[&>svg]:hidden",
             )}
           >
-            {text}
+            {joined}
           </TooltipContent>
         </Tooltip>
       );

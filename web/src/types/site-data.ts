@@ -6,6 +6,10 @@ export type BookRow = {
   avgRating: number | null;
   ratingsCount: number | null;
   publishedYear: number | null;
+  /** Print page count when present; null for unknown / non-paginated editions. */
+  pageCount: number | null;
+  /** Up to three “top genres” labels from the book page (Goodreads order). */
+  genres: string[];
   description: string;
 };
 

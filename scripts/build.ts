@@ -440,7 +440,7 @@ async function main() {
     path.join(publicDir, "data.json"),
     JSON.stringify(data, null, 2),
   );
-  log("done. Run: npm run build:web (from repo root)");
+  log("done. From repo root: npm run build (web only), or npm run scrape:build next time.");
   log(
     "summary:",
     data.posts

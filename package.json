@@ -6,9 +6,10 @@
   "scripts": {
     "scrape": "tsx scripts/build.ts",
     "build:web": "npm run build --prefix web",
-    "build": "npm run scrape && npm run build:web",
+    "build": "npm run build:web",
+    "scrape:build": "npm run scrape && npm run build:web",
     "dev": "npm run dev --prefix web",
-    "deploy:netlify": "npx netlify-cli deploy --prod",
+    "deploy:netlify": "npm run build && npx netlify-cli deploy --prod --dir web/dist",
     "plot:scatter": "tsx scripts/scatter-rating-pages.ts"
   },
   "devDependencies": {

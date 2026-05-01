@@ -56,20 +56,6 @@ export function RatingsScatterChart({
             maintainAspectRatio: false,
             animation: { duration: 400 },
             plugins: {
-              title: {
-                display: true,
-                text: "Goodreads Spring Challenge",
-                font: { size: 18, weight: "600" },
-                color: "#1e293b",
-                padding: { bottom: 8 },
-              },
-              subtitle: {
-                display: true,
-                text: "Dot size shows how many Goodreads ratings each book has.",
-                font: { size: 12 },
-                color: "#64748b",
-                padding: { bottom: 6 },
-              },
               legend: {
                 position: "bottom",
                 labels: {

@@ -111,11 +111,19 @@ export default function App() {
       <div className="bg-background text-destructive flex min-h-svh flex-col items-center justify-center gap-2 p-6">
         <p className="font-medium">Could not load book data</p>
         <p className="text-muted-foreground max-w-md text-center text-sm">
-          {error}. Run{" "}
+          {error}.           Run{" "}
           <code className="bg-muted rounded px-1 py-0.5 text-xs">
             npm run scrape
           </code>{" "}
-          from the repo root, then rebuild or refresh.
+          then{" "}
+          <code className="bg-muted rounded px-1 py-0.5 text-xs">
+            npm run build
+          </code>{" "}
+          from the repo root (or{" "}
+          <code className="bg-muted rounded px-1 py-0.5 text-xs">
+            npm run scrape:build
+          </code>
+          ), then refresh.
         </p>
       </div>
     );
@@ -157,7 +165,7 @@ export default function App() {
                 Goodreads Spring Challenges
               </h1>
               <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-                Scraped {new Date(site.scrapedAt).toLocaleString()}.
+                Last Updated: {new Date(site.scrapedAt).toLocaleString()}.
               </p>
             </div>
             <nav

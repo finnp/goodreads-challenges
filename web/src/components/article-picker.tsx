@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ChevronsUpDown } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
@@ -50,6 +50,7 @@ type ListFilterPickerProps = {
   selectedIndices: number[];
   onToggleIndex: (index: number) => void;
   onSelectAll: () => void;
+  onDeselectAll: () => void;
   className?: string;
 };
 
@@ -58,10 +59,9 @@ export function ArticlePicker({
   selectedIndices,
   onToggleIndex,
   onSelectAll,
+  onDeselectAll,
   className,
 }: ListFilterPickerProps) {
-  const [open, setOpen] = useState(false);
-
   const selectedSet = useMemo(
     () => new Set(selectedIndices),
     [selectedIndices],
@@ -73,7 +73,7 @@ export function ArticlePicker({
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover>
       <PopoverTrigger
         className={cn(
           buttonVariants({ variant: "outline", size: "default" }),
@@ -88,13 +88,20 @@ export function ArticlePicker({
         className="w-[min(calc(100vw-2rem),36rem)] max-w-xl p-0"
         align="start"
       >
-        <div className="flex flex-col gap-1 border-b p-2.5">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b px-2.5 py-2">
           <button
             type="button"
             className="text-primary hover:text-primary/90 text-left text-xs font-medium underline-offset-4 hover:underline"
             onClick={() => onSelectAll()}
           >
             Select all lists
+          </button>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground text-left text-xs font-medium underline-offset-4 hover:underline"
+            onClick={() => onDeselectAll()}
+          >
+            Deselect all lists
           </button>
         </div>
         <ul

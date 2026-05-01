@@ -87,7 +87,7 @@ export function GenreFilterPopover({
         )}
       >
         <ListFilter className="text-muted-foreground size-4 shrink-0 opacity-80" />
-        <span className="min-w-0 leading-none">Top genres</span>
+        <span className="min-w-0 leading-none">Filter genres</span>
         {selectedCount > 0 ? (
           <span className="bg-primary/15 text-primary inline-flex min-w-[1.25rem] items-center justify-center rounded-full px-1.5 py-0 text-[11px] font-semibold tabular-nums">
             {selectedCount}

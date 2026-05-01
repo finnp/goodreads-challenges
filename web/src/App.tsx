@@ -113,7 +113,6 @@ export default function App() {
         </header>
 
         <BooksDataTable
-          key={selectedListIndices.join(",")}
           data={tableRows}
           toolbarStart={
             <ArticlePicker
@@ -130,6 +129,7 @@ export default function App() {
               onSelectAll={() =>
                 setSelectedListIndices(site.posts.map((_, i) => i))
               }
+              onDeselectAll={() => setSelectedListIndices([])}
               className="h-8 min-h-8 min-w-[12rem] max-w-xs shrink-0"
             />
           }

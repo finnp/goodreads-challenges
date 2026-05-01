@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { booksColumns } from "@/components/books-columns";
 import { GenreFilterPopover } from "@/components/genre-filter-popover";
 import { bookDedupeKey } from "@/lib/merge-books";
+import { readTableUi, writeTableUi } from "@/lib/persisted-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -34,10 +35,11 @@ type BooksDataTableProps = {
 };
 
 export function BooksDataTable({ data, toolbarStart }: BooksDataTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([
-    { id: "title", desc: false },
-  ]);
-  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
+  const initialUi = useMemo(() => readTableUi(), []);
+  const [sorting, setSorting] = useState<SortingState>(() => initialUi.sorting);
+  const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>(
+    () => initialUi.columnFilters,
+  );
 
   const genreOptions = useMemo(() => {
     const s = new Set<string>();
@@ -71,6 +73,10 @@ export function BooksDataTable({ data, toolbarStart }: BooksDataTableProps) {
   useEffect(() => {
     table.setPageIndex(0);
   }, [columnFilters, table]);
+
+  useEffect(() => {
+    writeTableUi({ columnFilters, sorting });
+  }, [columnFilters, sorting]);
 
   return (
     <div className="w-full min-w-0 space-y-4">

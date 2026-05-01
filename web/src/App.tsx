@@ -1,13 +1,23 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { LineChart, Table2 } from "lucide-react";
 
 import { ArticlePicker } from "@/components/article-picker";
 import { BooksDataTable } from "@/components/books-data-table";
+import { RatingsScatterChart } from "@/components/ratings-scatter-chart";
 import {
   bookDedupeKey,
   countListsPerBook,
   listLabelsPerBook,
   mergeBooksUnique,
 } from "@/lib/merge-books";
+import {
+  readAppView,
+  readListIndices,
+  writeAppView,
+  writeListIndices,
+  type AppView,
+} from "@/lib/persisted-ui";
+import { cn } from "@/lib/utils";
 import type { BookTableRow, SiteData } from "@/types/site-data";
 
 const base = import.meta.env.BASE_URL.endsWith("/")
@@ -19,6 +29,8 @@ export default function App() {
   const [site, setSite] = useState<SiteData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedListIndices, setSelectedListIndices] = useState<number[]>([]);
+  const [appView, setAppView] = useState<AppView>(() => readAppView());
+  const listSelectionHydrated = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -31,7 +43,6 @@ export default function App() {
         const json = (await res.json()) as SiteData;
         if (!cancelled) {
           setSite(json);
-          setSelectedListIndices(json.posts.map((_, i) => i));
           setError(null);
         }
       } catch (e) {
@@ -44,6 +55,24 @@ export default function App() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!site?.posts?.length) return;
+    const saved = readListIndices(site.posts.length);
+    setSelectedListIndices(
+      saved !== null ? saved : site.posts.map((_, i) => i),
+    );
+    listSelectionHydrated.current = true;
+  }, [site]);
+
+  useEffect(() => {
+    if (!listSelectionHydrated.current || !site?.posts?.length) return;
+    writeListIndices(selectedListIndices);
+  }, [selectedListIndices, site?.posts?.length]);
+
+  useEffect(() => {
+    writeAppView(appView);
+  }, [appView]);
 
   const tableBooks = useMemo(() => {
     if (!site?.posts?.length) return [];
@@ -100,40 +129,88 @@ export default function App() {
     );
   }
 
+  const listPicker = (
+    <ArticlePicker
+      posts={site.posts}
+      selectedIndices={selectedListIndices}
+      onToggleIndex={(index) => {
+        setSelectedListIndices((prev) => {
+          const next = new Set(prev);
+          if (next.has(index)) next.delete(index);
+          else next.add(index);
+          return [...next].sort((a, b) => a - b);
+        });
+      }}
+      onSelectAll={() => setSelectedListIndices(site.posts.map((_, i) => i))}
+      onDeselectAll={() => setSelectedListIndices([])}
+      className="h-8 min-h-8 min-w-[12rem] max-w-xs shrink-0"
+    />
+  );
+
   return (
     <div className="bg-background min-h-svh overflow-x-hidden">
       <div className="mx-auto min-w-0 max-w-7xl px-4 py-10 md:px-6">
-        <header className="mb-8 space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Goodreads Spring Challenges
-          </h1>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Scraped {new Date(site.scrapedAt).toLocaleString()}.
-          </p>
+        <header className="mb-6 space-y-4">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-2">
+              <h1 className="text-3xl font-semibold tracking-tight">
+                Goodreads Spring Challenges
+              </h1>
+              <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+                Scraped {new Date(site.scrapedAt).toLocaleString()}.
+              </p>
+            </div>
+            <nav
+              className="bg-muted/40 inline-flex shrink-0 gap-0.5 rounded-lg border p-1 shadow-sm"
+              aria-label="Main views"
+            >
+              <button
+                type="button"
+                role="tab"
+                aria-selected={appView === "table"}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  appView === "table"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                onClick={() => setAppView("table")}
+              >
+                <Table2 className="size-4 shrink-0 opacity-80" aria-hidden />
+                Table
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={appView === "graph"}
+                className={cn(
+                  "inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  appView === "graph"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                )}
+                onClick={() => setAppView("graph")}
+              >
+                <LineChart className="size-4 shrink-0 opacity-80" aria-hidden />
+                Graph
+              </button>
+            </nav>
+          </div>
         </header>
 
-        <BooksDataTable
-          data={tableRows}
-          toolbarStart={
-            <ArticlePicker
-              posts={site.posts}
-              selectedIndices={selectedListIndices}
-              onToggleIndex={(index) => {
-                setSelectedListIndices((prev) => {
-                  const next = new Set(prev);
-                  if (next.has(index)) next.delete(index);
-                  else next.add(index);
-                  return [...next].sort((a, b) => a - b);
-                });
-              }}
-              onSelectAll={() =>
-                setSelectedListIndices(site.posts.map((_, i) => i))
-              }
-              onDeselectAll={() => setSelectedListIndices([])}
-              className="h-8 min-h-8 min-w-[12rem] max-w-xs shrink-0"
-            />
-          }
-        />
+        {appView === "table" ? (
+          <BooksDataTable data={tableRows} toolbarStart={listPicker} />
+        ) : (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">{listPicker}</div>
+            <div className="bg-card overflow-hidden rounded-xl border p-4 shadow-sm md:p-5">
+              <RatingsScatterChart
+                site={site}
+                selectedListIndices={selectedListIndices}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

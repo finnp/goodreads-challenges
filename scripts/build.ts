@@ -15,6 +15,8 @@ const EDITORIAL_POSTS: readonly { path: string; label: string }[] = [
   { path: "/blog/show/3089", label: "Editors' Picks" },
   { path: "/blog/show/3090", label: "Books About Books" },
   { path: "/blog/show/3048", label: "AAPI Heritage Month" },
+  { path: "/blog/show/3094", label: "Screen Adaptations" },
+  { path: "/blog/show/3095", label: "Escapist Reads" },
 ];
 /** Keep batches small: a full editorial list in one GET can hit HTTP 414 (URI too long). */
 const TOOLTIP_BATCH = Math.max(
